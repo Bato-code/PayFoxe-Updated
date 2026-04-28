@@ -92,7 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!data) {
-        // Profile may not exist yet for brand-new OAuth users — wait briefly and retry once
         await new Promise(r => setTimeout(r, 1500))
         const { data: retryData } = await supabase
           .from('profiles')
@@ -105,10 +104,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
 
-        return await _applyProfile(retryData, userId)
+        return await _applyProfile(retryData)
       }
 
-      await _applyProfile(data, userId)
+      await _applyProfile(data)
     } catch (error: any) {
       setLoading(false)
       if (error.code === '42P17' || error.code === '42501') {
@@ -120,8 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function _applyProfile(data: any, userId: string) {
-    // Ban enforcement
+  async function _applyProfile(data: any) {
     if (data.status === 'banned' || data.status === 'suspended') {
       await supabase.auth.signOut()
       setUser(null)
@@ -160,7 +158,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
 
-      // Check ban immediately after sign-in
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (authUser) {
         const { data: profile } = await supabase
